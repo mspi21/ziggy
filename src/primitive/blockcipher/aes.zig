@@ -110,7 +110,7 @@ pub fn aes_decrypt_block(n_rounds: comptime_int, block_in: *const [AES_BLOCK_SIZ
 
     // Finish last round.
     aes_inv_shift_rows(&state);
-    aes_sub_bytes(&state);
+    aes_inv_sub_bytes(&state);
     aes_add_round_key(&state, expanded_key[0..4]);
 
     // Write the result into the destination buffer.
