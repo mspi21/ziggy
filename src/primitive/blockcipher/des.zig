@@ -45,6 +45,13 @@ pub const DES_BIT_SELECTION_TABLE_E = [_]u5{
     28, 29, 30, 31, 32, 1,
 };
 
+pub const DES_PERMUTATION_FUNCTION_P = [_]u5{
+    16, 7,  20, 21, 29, 12, 28, 17,
+    1,  15, 23, 26, 5,  18, 31, 10,
+    2,  8,  24, 14, 32, 27, 3,  9,
+    19, 13, 30, 6,  22, 11, 4,  25,
+};
+
 pub const DES_KS_SHIFT_SCHEDULE = .{ 1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1 };
 
 // ----------------------------------- ENCRYPTION/DECRYPTION -----------------------------------  //
@@ -88,8 +95,7 @@ pub fn des_expand_key(key: *const [DES_ENCODED_KEY_SIZE]u8) [DES_N_ROUNDS][DES_S
     var subkeys: [DES_N_ROUNDS][DES_SUBKEY_SIZE]u8 = undefined;
 
     for (0..DES_N_ROUNDS) |i| {
-        rol(cd[0 .. DES_TRUE_KEY_SIZE / 2], DES_KS_SHIFT_SCHEDULE[i]);
-        rol(cd[DES_TRUE_KEY_SIZE / 2 ..], DES_KS_SHIFT_SCHEDULE[i]);
+        rotate_halves_left(cd[0..], DES_KS_SHIFT_SCHEDULE[i]);
         des_permuted_choice_2(cd, &subkeys[i]);
     }
 }
@@ -123,7 +129,14 @@ pub fn des_perform_round(state: *[DES_BLOCK_SIZE]u8, subkey: *[DES_SUBKEY_SIZE]u
     @memcpy(state[DES_BLOCK_SIZE / 2 ..], new_r[0..]);
 }
 
-pub fn des_cipher_function_f(word: [DES_BLOCK_SIZE / 2]u8, subkey: [DES_SUBKEY_SIZE]u8) [DES_BLOCK_SIZE / 2]u8 {
+pub fn des_cipher_function_f(word: [DES_BLOCK_SIZE / 2]u8, subkey: *const [DES_SUBKEY_SIZE]u8) [DES_BLOCK_SIZE / 2]u8 {
+    // The input word is expanded to 48 bits.
+    var expanded_word: [DES_SUBKEY_SIZE]u8 = undefined;
+    permute_bits(DES_SUBKEY_SIZE, word, &expanded_word, &DES_BIT_SELECTION_TABLE_E);
+
+    for (0..DES_SUBKEY_SIZE) |i|
+        expanded_word[i] ^= subkey[i];
+
     // todo
     _ = .{ word, subkey };
 }
@@ -138,9 +151,11 @@ pub fn des_inv_initial_permutation(in: *const [DES_BLOCK_SIZE]u8, out: *[DES_BLO
 
 // ----------------------------------- HELPERS -----------------------------------  //
 
-fn permute_bits(L: comptime_int, in: *const [8]u8, out: *[L]u8, key: [8 * L]u6) void {
+fn permute_bits(L: comptime_int, in: []u8, out: *[L]u8, key: [8 * L]u6) void {
     for (0..8 * L) |i| {
         const pi = key[i];
+        if (pi >= in.len * 8)
+            @panic("Bit index out of range!");
         const bit = get_nth_bit(in, pi);
         set_nth_bit(out, pi, bit);
     }
@@ -170,9 +185,9 @@ fn xor(L: comptime_int, a: [L]u8, b: [L]u8) [L]u8 {
     return result;
 }
 
-fn rol(word: *[DES_TRUE_KEY_SIZE / 2]u8, positions: comptime_int) void {
-    // todo
-    _ = .{ word, positions };
+fn rotate_halves_left(cd: *[DES_TRUE_KEY_SIZE]u8, positions: comptime_int) void {
+    // TODO
+    _ = .{ cd, positions };
 }
 
 // ----------------------------------- TEST VECTORS -----------------------------------  //
