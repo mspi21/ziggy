@@ -398,8 +398,7 @@ test "AES-128 key expansion test vector from FIPS 197 A.1" {
         0xac7766f3, 0x19fadc21, 0x28d12941, 0x575c006e,
         0xd014f9a8, 0xc9ee2589, 0xe13f0cc8, 0xb6630ca6,
     };
-
-    try testing.expect(std.mem.eql(u32, &aes_128_expand_key(&key), &expected_expansion));
+    try testing.expectEqualSlices(u32, &expected_expansion, &aes_128_expand_key(&key));
 }
 
 test "AES-192 key expansion test vector from FIPS 197 A.1" {
@@ -423,7 +422,7 @@ test "AES-192 key expansion test vector from FIPS 197 A.1" {
         0xca400538, 0x8fcc5006, 0x282d166a, 0xbc3ce7b5,
         0xe98ba06f, 0x448c773c, 0x8ecc7204, 0x01002202,
     };
-    try testing.expect(std.mem.eql(u32, &aes_192_expand_key(&key), &expected_expansion));
+    try testing.expectEqualSlices(u32, &expected_expansion, &aes_192_expand_key(&key));
 }
 
 test "AES-256 key expansion test vector from FIPS 197 A.1" {
@@ -450,7 +449,7 @@ test "AES-256 key expansion test vector from FIPS 197 A.1" {
         0xcafaaae3, 0xe4d59b34, 0x9adf6ace, 0xbd10190d,
         0xfe4890d1, 0xe6188d0b, 0x046df344, 0x706c631e,
     };
-    try testing.expect(std.mem.eql(u32, &aes_256_expand_key(&key), &expected_expansion));
+    try testing.expectEqualSlices(u32, &expected_expansion, &aes_256_expand_key(&key));
 }
 
 // https://csrc.nist.gov/projects/cryptographic-standards-and-guidelines/example-values
@@ -474,7 +473,7 @@ test "AES-128 ECB encryption" {
     var buffer: [AES_BLOCK_SIZE]u8 = undefined;
     for (plaintext, 0..) |pt, i| {
         aes_128_encrypt_block(&key, &pt, &buffer);
-        try testing.expect(std.mem.eql(u8, &buffer, &ciphertext[i]));
+        try testing.expectEqualSlices(u8, &ciphertext[i], &buffer);
     }
 }
 
@@ -499,7 +498,7 @@ test "AES-128 ECB decryption" {
     var buffer: [AES_BLOCK_SIZE]u8 = undefined;
     for (ciphertext, 0..) |ct, i| {
         aes_128_decrypt_block(&key, &ct, &buffer);
-        try testing.expect(std.mem.eql(u8, &buffer, &plaintext[i]));
+        try testing.expectEqualSlices(u8, &plaintext[i], &buffer);
     }
 }
 
@@ -526,7 +525,7 @@ test "AES-192 ECB encryption" {
     var buffer: [AES_BLOCK_SIZE]u8 = undefined;
     for (plaintext, 0..) |pt, i| {
         aes_192_encrypt_block(&key, &pt, &buffer);
-        try testing.expect(std.mem.eql(u8, &buffer, &ciphertext[i]));
+        try testing.expectEqualSlices(u8, &ciphertext[i], &buffer);
     }
 }
 
@@ -553,7 +552,7 @@ test "AES-192 ECB decryption" {
     var buffer: [AES_BLOCK_SIZE]u8 = undefined;
     for (ciphertext, 0..) |ct, i| {
         aes_192_decrypt_block(&key, &ct, &buffer);
-        try testing.expect(std.mem.eql(u8, &buffer, &plaintext[i]));
+        try testing.expectEqualSlices(u8, &plaintext[i], &buffer);
     }
 }
 
@@ -579,7 +578,7 @@ test "AES-256 ECB encryption" {
     var buffer: [AES_BLOCK_SIZE]u8 = undefined;
     for (plaintext, 0..) |pt, i| {
         aes_256_encrypt_block(&key, &pt, &buffer);
-        try testing.expect(std.mem.eql(u8, &buffer, &ciphertext[i]));
+        try testing.expectEqualSlices(u8, &ciphertext[i], &buffer);
     }
 }
 
@@ -605,7 +604,7 @@ test "AES-256 ECB decryption" {
     var buffer: [AES_BLOCK_SIZE]u8 = undefined;
     for (ciphertext, 0..) |ct, i| {
         aes_256_decrypt_block(&key, &ct, &buffer);
-        try testing.expect(std.mem.eql(u8, &buffer, &plaintext[i]));
+        try testing.expectEqualSlices(u8, &plaintext[i], &buffer);
     }
 }
 
