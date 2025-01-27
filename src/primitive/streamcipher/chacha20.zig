@@ -6,6 +6,12 @@ const testing = std.testing;
 const CHACHA20_BLOCK_SIZE = 512 / 8;
 const CHACHA20_BLOCK_WORDS = CHACHA20_BLOCK_SIZE / 4;
 
+const CHACHA20_KEY_SIZE = 256 / 8;
+const CHACHA20_KEY_WORDS = CHACHA20_KEY_SIZE / 4;
+
+const CHACHA20_NONCE_SIZE = 128 / 8;
+const CHACHA20_NONCE_WORDS = CHACHA20_NONCE_SIZE / 4;
+
 const CHACHA20_CONSTANTS = [128 / 8 / 4]u32{
     bytes_to_word_le("expa"),
     bytes_to_word_le("nd 3"),
@@ -14,65 +20,64 @@ const CHACHA20_CONSTANTS = [128 / 8 / 4]u32{
 };
 
 pub const ChaCha20_Bernstein_Parameters = struct {
-    pub const KEY_SIZE = 256 / 8;
     pub const NONCE_SIZE = 64 / 8;
     pub const COUNTER_SIZE = 64 / 8;
 };
 
 pub const ChaCha20_RFC7539_Parameters = struct {
-    pub const KEY_SIZE = 256 / 8;
     pub const NONCE_SIZE = 96 / 8;
     pub const COUNTER_SIZE = 32 / 8;
 };
 
 // ----------------------------------- ENCRYPTION/DECRYPTION -----------------------------------  //
 
-pub const ChaCha20_Bernstein_Ctx = struct {
+pub const ChaCha20Ctx = struct {
+    key: [CHACHA20_KEY_WORDS]u32,
+    nonce: [CHACHA20_NONCE_WORDS]u32,
     state: [CHACHA20_BLOCK_WORDS]u32,
-    key: [ChaCha20_Bernstein_Parameters.KEY_SIZE / 4]u32,
-    nonce: [ChaCha20_Bernstein_Parameters.NONCE_SIZE / 4]u32,
-    counter: [ChaCha20_Bernstein_Parameters.COUNTER_SIZE / 4]u32,
+    working_state: [CHACHA20_BLOCK_WORDS]u32,
+    keystream_idx: u6,
 };
 
-pub const ChaCha20_RFC7539_Ctx = struct {
-    state: [CHACHA20_BLOCK_WORDS]u32,
-    key: [ChaCha20_RFC7539_Parameters.KEY_SIZE / 4]u32,
-    nonce: [ChaCha20_RFC7539_Parameters.NONCE_SIZE / 4]u32,
-    counter: [ChaCha20_RFC7539_Parameters.COUNTER_SIZE / 4]u32,
-};
-
-pub fn chacha20_bernstein_new(
-    key: *const [ChaCha20_Bernstein_Parameters.KEY_SIZE]u8,
-    nonce: *const [ChaCha20_Bernstein_Parameters.NONCE_SIZE]u8,
-    counter: *const [ChaCha20_Bernstein_Parameters.COUNTER_SIZE]u8,
-) ChaCha20_Bernstein_Ctx {
-    var ctx = ChaCha20_Bernstein_Ctx{
-        .state = undefined,
+pub fn chacha20_new(key: *const [CHACHA20_KEY_SIZE]u8, nonce: *const [CHACHA20_NONCE_SIZE]u8) ChaCha20Ctx {
+    var ctx = ChaCha20Ctx{
         .key = undefined,
         .nonce = undefined,
-        .counter = undefined,
+        .state = undefined,
+        .working_state = undefined,
+        .keystream_idx = undefined,
     };
-    chacha20_deserialize(ChaCha20_Bernstein_Parameters.KEY_SIZE / 4, key, &ctx.key);
-    chacha20_deserialize(ChaCha20_Bernstein_Parameters.NONCE_SIZE / 4, nonce, &ctx.nonce);
-    chacha20_deserialize(ChaCha20_Bernstein_Parameters.COUNTER_SIZE / 4, counter, &ctx.counter);
+
+    chacha20_deserialize(CHACHA20_KEY_WORDS, key, &ctx.key);
+    chacha20_deserialize(CHACHA20_NONCE_WORDS, nonce, &ctx.nonce);
+
+    chacha20_block_function(&ctx);
+    ctx.keystream_idx = 0;
+
     return ctx;
 }
 
+pub fn chacha20_destroy(ctx: *ChaCha20Ctx) void {
+    @memset(ctx.state, 0);
+    @memset(ctx.key, 0);
+    @memset(ctx.nonce, 0);
+    ctx.keystream_idx = 0;
+}
+
+pub fn chacha20_bernstein_new(
+    key: *const [CHACHA20_KEY_SIZE]u8,
+    nonce: *const [ChaCha20_Bernstein_Parameters.NONCE_SIZE]u8,
+    counter: *const [ChaCha20_Bernstein_Parameters.COUNTER_SIZE]u8,
+) ChaCha20Ctx {
+    return chacha20_new(key, counter ++ nonce);
+}
+
 pub fn chacha20_rfc7539_new(
-    key: *const [ChaCha20_RFC7539_Parameters.KEY_SIZE]u8,
+    key: *const [CHACHA20_KEY_SIZE]u8,
     nonce: *const [ChaCha20_RFC7539_Parameters.NONCE_SIZE]u8,
     counter: *const [ChaCha20_RFC7539_Parameters.COUNTER_SIZE]u8,
-) ChaCha20_RFC7539_Ctx {
-    var ctx = ChaCha20_RFC7539_Ctx{
-        .state = undefined,
-        .key = undefined,
-        .nonce = undefined,
-        .counter = undefined,
-    };
-    chacha20_deserialize(ChaCha20_RFC7539_Parameters.KEY_SIZE / 4, key, &ctx.key);
-    chacha20_deserialize(ChaCha20_RFC7539_Parameters.NONCE_SIZE / 4, nonce, &ctx.nonce);
-    chacha20_deserialize(ChaCha20_RFC7539_Parameters.COUNTER_SIZE / 4, counter, &ctx.counter);
-    return ctx;
+) ChaCha20Ctx {
+    return chacha20_new(key, counter ++ nonce);
 }
 
 pub fn chacha20_quarter_round(
@@ -117,67 +122,36 @@ pub fn chacha20_inner_block(state: *[CHACHA20_BLOCK_WORDS]u32) void {
     chacha20_quarter_round(state, 3, 4, 9, 14);
 }
 
-pub fn chacha20_block_function(
-    key_size: comptime_int,
-    nonce_size: comptime_int,
-    counter_size: comptime_int,
-    state: *[CHACHA20_BLOCK_WORDS]u32,
-    key: *const [key_size / 4]u32,
-    nonce: *const [nonce_size / 4]u32,
-    counter: *const [counter_size / 4]u32,
-) void {
+pub fn chacha20_block_function(ctx: *ChaCha20Ctx) void {
     // Reset state.
     {
         comptime var i = 0;
-        @memcpy(state[i .. i + CHACHA20_CONSTANTS.len], &CHACHA20_CONSTANTS);
+
+        @memcpy(ctx.state[i .. i + CHACHA20_CONSTANTS.len], &CHACHA20_CONSTANTS);
         i += CHACHA20_CONSTANTS.len;
-        @memcpy(state[i .. i + key_size / 4], key[0..]);
-        i += key_size / 4;
-        @memcpy(state[i .. i + counter_size / 4], counter[0..]);
-        i += counter_size / 4;
-        @memcpy(state[i .. i + nonce_size / 4], nonce[0..]);
-        i += nonce_size / 4;
+
+        @memcpy(ctx.state[i .. i + CHACHA20_KEY_WORDS], ctx.key[0..]);
+        i += CHACHA20_KEY_WORDS;
+
+        @memcpy(ctx.state[i .. i + CHACHA20_NONCE_WORDS], ctx.nonce[0..]);
+        i += CHACHA20_NONCE_WORDS;
+
         if (comptime i != CHACHA20_BLOCK_WORDS)
             @panic("Invalid ChaCha20 parameters: |constants + key + nonce + counter| != block_size!");
     }
 
     // Copy state to working_state.
-    var working_state: [CHACHA20_BLOCK_WORDS]u32 = undefined;
-    @memcpy(&working_state, state);
+    @memcpy(&ctx.working_state, &ctx.state);
 
     // Perform all 20 rounds (10 column rounds and 10 diagonal rounds).
     for (0..10) |_| {
-        chacha20_inner_block(state);
+        chacha20_inner_block(&ctx.working_state);
     }
 
     // Add the working_state to the state.
     for (0..CHACHA20_BLOCK_WORDS) |i| {
-        state[i] +%= working_state[i];
+        ctx.state[i] +%= ctx.working_state[i];
     }
-}
-
-pub fn chacha20_bernstein_block_function(ctx: *ChaCha20_Bernstein_Ctx) void {
-    chacha20_block_function(
-        ChaCha20_Bernstein_Parameters.KEY_SIZE,
-        ChaCha20_Bernstein_Parameters.NONCE_SIZE,
-        ChaCha20_Bernstein_Parameters.COUNTER_SIZE,
-        &ctx.state,
-        &ctx.key,
-        &ctx.nonce,
-        &ctx.counter,
-    );
-}
-
-pub fn chacha20_rfc7539_block_function(ctx: *ChaCha20_RFC7539_Ctx) void {
-    chacha20_block_function(
-        ChaCha20_RFC7539_Parameters.KEY_SIZE,
-        ChaCha20_RFC7539_Parameters.NONCE_SIZE,
-        ChaCha20_RFC7539_Parameters.COUNTER_SIZE,
-        &ctx.state,
-        &ctx.key,
-        &ctx.nonce,
-        &ctx.counter,
-    );
 }
 
 // ----------------------------------- LITTLE ENDIAN HELPERS -----------------------------------  //
@@ -273,7 +247,7 @@ test "ChaCha20 Block Function" {
         0xb5, 0x12, 0x9c, 0xd1, 0xde, 0x16, 0x4e, 0xb9, 0xcb, 0xd0, 0x83, 0xe8, 0xa2, 0x50, 0x3c, 0x4e,
     };
 
-    chacha20_rfc7539_block_function(&chacha);
+    chacha20_block_function(&chacha);
 
     var buffer: [CHACHA20_BLOCK_SIZE]u8 = undefined;
     chacha20_serialize(CHACHA20_BLOCK_WORDS, &chacha.state, &buffer);
