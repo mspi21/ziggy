@@ -39,7 +39,16 @@ pub const ChaCha20Ctx = struct {
     keystream_idx: u6,
 };
 
-pub fn chacha20_new(key: *const [CHACHA20_KEY_SIZE]u8, nonce: *const [CHACHA20_NONCE_SIZE]u8) ChaCha20Ctx {
+pub fn chacha20_new(
+    key: *const [CHACHA20_KEY_SIZE]u8,
+    counter_size: comptime_int,
+    counter: *const [counter_size]u8,
+    nonce_size: comptime_int,
+    nonce: *const [nonce_size]u8,
+) ChaCha20Ctx {
+    if (comptime counter_size + nonce_size != CHACHA20_NONCE_SIZE)
+        @panic("Invalid ChaCha initialization: The size of counter and nonce must add up to 16 bytes.");
+
     var ctx = ChaCha20Ctx{
         .key = undefined,
         .nonce = undefined,
@@ -48,8 +57,12 @@ pub fn chacha20_new(key: *const [CHACHA20_KEY_SIZE]u8, nonce: *const [CHACHA20_N
         .keystream_idx = undefined,
     };
 
+    const counter_words = comptime counter_size / 4;
+    const nonce_words = comptime nonce_size / 4;
+
     chacha20_deserialize(CHACHA20_KEY_WORDS, key, &ctx.key);
-    chacha20_deserialize(CHACHA20_NONCE_WORDS, nonce, &ctx.nonce);
+    chacha20_deserialize(counter_words, counter, ctx.nonce[0..counter_words]);
+    chacha20_deserialize(nonce_words, nonce, ctx.nonce[counter_words .. counter_words + nonce_words]);
 
     chacha20_block_function(&ctx);
     ctx.keystream_idx = 0;
@@ -69,7 +82,13 @@ pub fn chacha20_bernstein_new(
     nonce: *const [ChaCha20_Bernstein_Parameters.NONCE_SIZE]u8,
     counter: *const [ChaCha20_Bernstein_Parameters.COUNTER_SIZE]u8,
 ) ChaCha20Ctx {
-    return chacha20_new(key, counter ++ nonce);
+    return chacha20_new(
+        key,
+        ChaCha20_Bernstein_Parameters.COUNTER_SIZE,
+        counter,
+        ChaCha20_Bernstein_Parameters.NONCE_SIZE,
+        nonce,
+    );
 }
 
 pub fn chacha20_rfc7539_new(
@@ -77,7 +96,13 @@ pub fn chacha20_rfc7539_new(
     nonce: *const [ChaCha20_RFC7539_Parameters.NONCE_SIZE]u8,
     counter: *const [ChaCha20_RFC7539_Parameters.COUNTER_SIZE]u8,
 ) ChaCha20Ctx {
-    return chacha20_new(key, counter ++ nonce);
+    return chacha20_new(
+        key,
+        ChaCha20_RFC7539_Parameters.COUNTER_SIZE,
+        counter,
+        ChaCha20_RFC7539_Parameters.NONCE_SIZE,
+        nonce,
+    );
 }
 
 pub fn chacha20_quarter_round(
