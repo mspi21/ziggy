@@ -79,9 +79,10 @@ pub fn chacha20_new(
 }
 
 pub fn chacha20_destroy(ctx: *ChaCha20Ctx) void {
-    @memset(&ctx.state, 0);
     @memset(&ctx.key, 0);
     @memset(&ctx.nonce, 0);
+    @memset(&ctx.state, 0);
+    @memset(&ctx.working_state, 0);
     ctx.keystream_idx = 0;
 }
 
