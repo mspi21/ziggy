@@ -122,7 +122,8 @@ pub fn aes_decrypt_block(n_rounds: comptime_int, block_in: *const [AES_BLOCK_SIZ
 
 pub fn aes_128_encrypt_block(key: *const [Aes128Parameters.KEY_SIZE]u8, block_in: *const [AES_BLOCK_SIZE]u8, block_out: *[AES_BLOCK_SIZE]u8) void {
     // Prepare the subkeys for AddRoundKey.
-    const expanded_key = aes_128_expand_key(key);
+    var expanded_key = aes_128_expand_key(key);
+    defer @memset(&expanded_key, 0);
 
     // Call the generic encryption procedure.
     aes_encrypt_block(Aes128Parameters.N_ROUNDS, block_in, block_out, &expanded_key);
@@ -130,7 +131,8 @@ pub fn aes_128_encrypt_block(key: *const [Aes128Parameters.KEY_SIZE]u8, block_in
 
 pub fn aes_128_decrypt_block(key: *const [Aes128Parameters.KEY_SIZE]u8, block_in: *const [AES_BLOCK_SIZE]u8, block_out: *[AES_BLOCK_SIZE]u8) void {
     // Prepare the subkeys for AddRoundKey.
-    const expanded_key = aes_128_expand_key(key);
+    var expanded_key = aes_128_expand_key(key);
+    defer @memset(&expanded_key, 0);
 
     // Call the generic decryption procedure.
     aes_decrypt_block(Aes128Parameters.N_ROUNDS, block_in, block_out, &expanded_key);
@@ -138,7 +140,8 @@ pub fn aes_128_decrypt_block(key: *const [Aes128Parameters.KEY_SIZE]u8, block_in
 
 pub fn aes_192_encrypt_block(key: *const [Aes192Parameters.KEY_SIZE]u8, block_in: *const [AES_BLOCK_SIZE]u8, block_out: *[AES_BLOCK_SIZE]u8) void {
     // Prepare the subkeys for AddRoundKey.
-    const expanded_key = aes_192_expand_key(key);
+    var expanded_key = aes_192_expand_key(key);
+    defer @memset(&expanded_key, 0);
 
     // Call the generic encryption procedure.
     aes_encrypt_block(Aes192Parameters.N_ROUNDS, block_in, block_out, &expanded_key);
@@ -146,7 +149,8 @@ pub fn aes_192_encrypt_block(key: *const [Aes192Parameters.KEY_SIZE]u8, block_in
 
 pub fn aes_192_decrypt_block(key: *const [Aes192Parameters.KEY_SIZE]u8, block_in: *const [AES_BLOCK_SIZE]u8, block_out: *[AES_BLOCK_SIZE]u8) void {
     // Prepare the subkeys for AddRoundKey.
-    const expanded_key = aes_192_expand_key(key);
+    var expanded_key = aes_192_expand_key(key);
+    defer @memset(&expanded_key, 0);
 
     // Call the generic decryption procedure.
     aes_decrypt_block(Aes192Parameters.N_ROUNDS, block_in, block_out, &expanded_key);
@@ -154,7 +158,8 @@ pub fn aes_192_decrypt_block(key: *const [Aes192Parameters.KEY_SIZE]u8, block_in
 
 pub fn aes_256_encrypt_block(key: *const [Aes256Parameters.KEY_SIZE]u8, block_in: *const [AES_BLOCK_SIZE]u8, block_out: *[AES_BLOCK_SIZE]u8) void {
     // Prepare the subkeys for AddRoundKey.
-    const expanded_key = aes_256_expand_key(key);
+    var expanded_key = aes_256_expand_key(key);
+    defer @memset(&expanded_key, 0);
 
     // Call the generic encryption procedure.
     aes_encrypt_block(Aes256Parameters.N_ROUNDS, block_in, block_out, &expanded_key);
@@ -162,7 +167,8 @@ pub fn aes_256_encrypt_block(key: *const [Aes256Parameters.KEY_SIZE]u8, block_in
 
 pub fn aes_256_decrypt_block(key: *const [Aes256Parameters.KEY_SIZE]u8, block_in: *const [AES_BLOCK_SIZE]u8, block_out: *[AES_BLOCK_SIZE]u8) void {
     // Prepare the subkeys for AddRoundKey.
-    const expanded_key = aes_256_expand_key(key);
+    var expanded_key = aes_256_expand_key(key);
+    defer @memset(&expanded_key, 0);
 
     // Call the generic decryption procedure.
     aes_decrypt_block(Aes256Parameters.N_ROUNDS, block_in, block_out, &expanded_key);
