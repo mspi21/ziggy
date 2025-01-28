@@ -47,15 +47,10 @@ const SHA_512_256_IV = [_]u64{
 
 const Sha1Ctx = struct {
     const BLOCK_SIZE = 512 / 8;
+    const MESSAGE_SCHEDULE_WORDS = 80;
 
-    message_schedule: [16]u32,
-    hash: [5]u32,
-    a: u32,
-    b: u32,
-    c: u32,
-    d: u32,
-    e: u32,
-
+    message_schedule: [MESSAGE_SCHEDULE_WORDS]u32,
+    hash: [SHA_1_DIGEST_LENGTH / 4]u32,
     message_buffer: [BLOCK_SIZE]u8,
     message_length: u64,
 };
@@ -65,15 +60,6 @@ const Sha2Ctx = struct {
 
     message_schedule: [16]u32,
     hash: [8]u32,
-    a: u32,
-    b: u32,
-    c: u32,
-    d: u32,
-    e: u32,
-    f: u32,
-    g: u32,
-    h: u32,
-
     message_buffer: [BLOCK_SIZE]u8,
     message_length: u64,
 
@@ -85,15 +71,6 @@ const Sha3Ctx = struct {
 
     message_schedule: [16]u64,
     hash: [8]u64,
-    a: u64,
-    b: u64,
-    c: u64,
-    d: u64,
-    e: u64,
-    f: u64,
-    g: u64,
-    h: u64,
-
     message_buffer: [BLOCK_SIZE]u8,
     message_length: u128,
 
@@ -107,33 +84,156 @@ pub fn sha1_new() Sha1Ctx {
     var ctx = Sha1Ctx{
         .message_schedule = undefined,
         .hash = undefined,
-        .a = undefined,
-        .b = undefined,
-        .c = undefined,
-        .d = undefined,
-        .e = undefined,
         .message_buffer = undefined,
         .message_length = 0,
     };
-
     @memcpy(&ctx.hash, &SHA_1_IV);
-    ctx.a = ctx.hash[0];
-    ctx.b = ctx.hash[1];
-    ctx.c = ctx.hash[2];
-    ctx.d = ctx.hash[3];
-    ctx.e = ctx.hash[4];
-
     return ctx;
 }
 
 pub fn sha1_update(ctx: *Sha1Ctx, message: []const u8) !void {
-    // TODO
-    _ = .{ ctx, message };
+    // SHA-1 can digest a message of a maximum length of (2^64 - 1) bits due to the nature of its padding.
+    if (ctx.message_length + message.len > ((1 << 64) / 8))
+        return MessageLengthLimitExceeded;
+
+    const cnt_buffered_bytes = ctx.message_length % Sha1Ctx.BLOCK_SIZE;
+
+    // Simplest case - the message did not fully fill the block size
+    // so it's just copied to the context and no hashing is done yet.
+    if (cnt_buffered_bytes + message.len < Sha1Ctx.BLOCK_SIZE) {
+        @memcpy(
+            ctx.message_buffer[cnt_buffered_bytes .. cnt_buffered_bytes + message.len],
+            message[0..],
+        );
+        ctx.message_length += message.len;
+        return;
+    }
+
+    // Otherwise: first, copy & hash the first block.
+    @memcpy(
+        ctx.message_buffer[cnt_buffered_bytes..],
+        message[0 .. Sha1Ctx.BLOCK_SIZE - cnt_buffered_bytes],
+    );
+    sha1_hash_one_block(ctx);
+    var cnt_message_bytes_processed = Sha1Ctx.BLOCK_SIZE - cnt_buffered_bytes;
+    ctx.message_length += cnt_message_bytes_processed;
+
+    // Then, as long as there is at least another block available, copy and hash it.
+    while (message.len - cnt_message_bytes_processed >= Sha1Ctx.BLOCK_SIZE) {
+        @memcpy(ctx.message_buffer[0..], message[cnt_message_bytes_processed .. cnt_message_bytes_processed + Sha1Ctx.BLOCK_SIZE]);
+        sha1_hash_one_block(ctx);
+        ctx.message_length += Sha1Ctx.BLOCK_SIZE;
+        cnt_message_bytes_processed += Sha1Ctx.BLOCK_SIZE;
+    }
+
+    // Finally, copy any leftover bytes to the context buffer without hashing.
+    const cnt_leftover_bytes = message.len - cnt_message_bytes_processed;
+    @memcpy(
+        ctx.message_buffer[0..cnt_leftover_bytes],
+        message[cnt_message_bytes_processed..],
+    );
+    ctx.message_length += cnt_leftover_bytes;
 }
 
-pub fn sha1_final(ctx: *Sha1Ctx, out: [SHA_1_DIGEST_LENGTH]u8) void {
-    // TODO
-    _ = .{ ctx, out };
+pub fn sha1_final(ctx: *Sha1Ctx, out: *[SHA_1_DIGEST_LENGTH]u8) void {
+    // The message length is stored in the padding as a 64-bit int.
+    const message_length_bytes = 64 / 8;
+
+    const cnt_leftover_bytes = ctx.message_length % Sha1Ctx.BLOCK_SIZE;
+
+    // Simpler case: The leftover message is shorter than 446 bits
+    // (or 55 bytes) and the padding only spans one block.
+    if (cnt_leftover_bytes < Sha1Ctx.BLOCK_SIZE - (message_length_bytes)) {
+        const cnt_padding_bytes = Sha1Ctx.BLOCK_SIZE - message_length_bytes - cnt_leftover_bytes;
+
+        // The padding (without the message length) is a single 1 bit followed by 0 bits.
+        ctx.message_buffer[cnt_leftover_bytes] = 0x80;
+        @memset(ctx.message_buffer[cnt_leftover_bytes + 1 .. cnt_leftover_bytes + cnt_padding_bytes], 0x00);
+
+        // The length is appended.
+        const length = serialize_int_big_endian(u64, ctx.message_length * 8);
+        @memcpy(ctx.message_buffer[cnt_leftover_bytes + cnt_padding_bytes ..], length[0..]);
+
+        // The padded block is finally hashed.
+        sha1_hash_one_block(ctx);
+    }
+    // Otherwise, the padding spans 2 blocks in total
+    // and two more hash iterations are performed.
+    else {
+        // Pad and hash the first block.
+        ctx.message_buffer[cnt_leftover_bytes] = 0x80;
+        @memset(ctx.message_buffer[cnt_leftover_bytes + 1 ..], 0x00);
+        sha1_hash_one_block(ctx);
+
+        // Hash the second block.
+        @memset(ctx.message_buffer[0..(Sha1Ctx.BLOCK_SIZE - message_length_bytes)], 0x00);
+        const length = serialize_int_big_endian(u64, ctx.message_length * 8);
+        @memcpy(ctx.message_buffer[(Sha1Ctx.BLOCK_SIZE - message_length_bytes)..], length[0..]);
+        sha1_hash_one_block(ctx);
+    }
+
+    // Serialize the result.
+    for (0..SHA_1_DIGEST_LENGTH / 4) |w| {
+        const serialized_word = serialize_int_big_endian(u32, ctx.hash[w]);
+        @memcpy(out[(w * 4)..(w * 4 + 4)], serialized_word[0..]);
+    }
+}
+
+pub fn sha1_hash_one_block(ctx: *Sha1Ctx) void {
+    // Prepare the message schedule.
+    for (0..Sha1Ctx.BLOCK_SIZE / 4) |t|
+        ctx.message_schedule[t] = deserialize_int_big_endian(u32, @ptrCast(ctx.message_buffer[(t * 4)..(t * 4 + 4)]));
+    for (Sha1Ctx.BLOCK_SIZE / 4..Sha1Ctx.MESSAGE_SCHEDULE_WORDS) |t| {
+        ctx.message_schedule[t] = rotl(
+            u32,
+            ctx.message_schedule[t - 3] ^ ctx.message_schedule[t - 8] ^ ctx.message_schedule[t - 14] ^ ctx.message_schedule[t - 16],
+            1,
+        );
+    }
+
+    // Initialize working variables.
+    var a = ctx.hash[0];
+    var b = ctx.hash[1];
+    var c = ctx.hash[2];
+    var d = ctx.hash[3];
+    var e = ctx.hash[4];
+
+    // Perform the actual hashing.
+    inline for (0..Sha1Ctx.MESSAGE_SCHEDULE_WORDS) |t| {
+        const tmp = rotl(u32, a, 5) +% sha1_f(t, b, c, d) +% e +% sha1_k(t) +% ctx.message_schedule[t];
+        e = d;
+        d = c;
+        c = rotl(u32, b, 30);
+        b = a;
+        a = tmp;
+    }
+
+    // Add the result to the previous hash state.
+    ctx.hash[0] +%= a;
+    ctx.hash[1] +%= b;
+    ctx.hash[2] +%= c;
+    ctx.hash[3] +%= d;
+    ctx.hash[4] +%= e;
+}
+
+inline fn sha1_f(t: comptime_int, x: u32, y: u32, z: u32) u32 {
+    return switch (t) {
+        0...19 => ch(u32, x, y, z),
+        20...39 => parity(u32, x, y, z),
+        40...59 => maj(u32, x, y, z),
+        60...79 => parity(u32, x, y, z),
+        else => @compileError("SHA-1 `f` function called with invalid value of `t`."),
+    };
+}
+
+inline fn sha1_k(t: comptime_int) u32 {
+    return switch (t) {
+        0...19 => 0x5a827999,
+        20...39 => 0x6ed9eba1,
+        40...59 => 0x8f1bbcdc,
+        60...79 => 0xca62c1d6,
+        else => @compileError("SHA-1 `k` constant requested with invalid value of `t`."),
+    };
 }
 
 pub fn sha2_new(t: comptime_int) Sha2Ctx {
@@ -276,4 +376,97 @@ pub fn sha512_256_update(ctx: *Sha3Ctx, message: []const u8) !void {
 pub fn sha512_256_final(ctx: *Sha3Ctx, out: [SHA_512_256_DIGEST_LENGTH]u8) void {
     // TODO
     _ = .{ ctx, out };
+}
+
+// ----------------------------------- Non-linear functions ----------------------------------- //
+
+fn ch(T: type, x: T, y: T, z: T) T {
+    return (x & y) ^ (~x & z);
+}
+
+fn parity(T: type, x: T, y: T, z: T) T {
+    return x ^ y ^ z;
+}
+
+fn maj(T: type, x: T, y: T, z: T) T {
+    return (x & y) ^ (x & z) ^ (y & z);
+}
+
+// ----------------------------------- HELPERS ----------------------------------- //
+
+fn rotl(T: type, word: T, bits: comptime_int) T {
+    if (comptime bits >= @bitSizeOf(T))
+        @compileError("Will not rotate word left by more bits than it has!");
+    return (word << bits) | (word >> (@bitSizeOf(T) - bits));
+}
+
+fn serialize_int_big_endian(T: type, int: T) [@sizeOf(T)]u8 {
+    var res: [@sizeOf(T)]u8 = undefined;
+    for (0..@sizeOf(T)) |i|
+        res[i] = @truncate(int >> @intCast(8 * (@sizeOf(T) - i - 1)));
+    return res;
+}
+
+fn deserialize_int_big_endian(T: type, bytes: *const [@sizeOf(T)]u8) T {
+    var res: T = 0;
+    for (0..@sizeOf(T)) |i|
+        res |= @as(T, bytes[i]) << @intCast(8 * (@sizeOf(T) - i - 1));
+    return res;
+}
+
+// ----------------------------------- TEST VECTORS ----------------------------------- //
+
+fn hex_nibble_to_int(ascii_hex: u8) u4 {
+    const x = ascii_hex;
+    return @intCast(if (x >= '0' and x <= '9')
+        x - '0'
+    else if (x >= 'a' and x <= 'f')
+        10 + (x - 'a')
+    else if (x >= 'A' and x <= 'F')
+        10 + (x - 'A')
+    else
+        @panic("Argument is not a valid hex digit!"));
+}
+
+fn hex_to_bytes(L: comptime_int, hex_string: *const [2 * L]u8) [L]u8 {
+    var res: [L]u8 = undefined;
+    for (0..L) |i| {
+        res[i] = @as(u8, hex_nibble_to_int(hex_string[2 * i])) << 4;
+        res[i] |= hex_nibble_to_int(hex_string[2 * i + 1]);
+    }
+    return res;
+}
+
+// https://www.di-mgt.com.au/sha_testvectors.html
+test "SHA-1 basic test" {
+    const tests = [_]struct {
+        message: []const u8,
+        hash: *const [2 * SHA_1_DIGEST_LENGTH]u8,
+    }{
+        .{ .message = "", .hash = "da39a3ee5e6b4b0d3255bfef95601890afd80709" },
+        .{ .message = "abc", .hash = "a9993e364706816aba3e25717850c26c9cd0d89d" },
+        .{
+            .message = "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq",
+            .hash = "84983e441c3bd26ebaae4aa1f95129e5e54670f1",
+        },
+        .{
+            .message = "abcdefghbcdefghicdefghijdefghijkefghijklfghijklmghijklmnhijklmnoijklmnopjklmnopqklmnopqrlmnopqrsmnopqrstnopqrstu",
+            .hash = "a49b2446a02c645bf419f995b67091253a04a259",
+        },
+    };
+
+    var digest_buffer: [SHA_1_DIGEST_LENGTH]u8 = undefined;
+
+    for (tests) |t| {
+        var ctx = sha1_new();
+        try sha1_update(&ctx, t.message);
+        sha1_final(&ctx, &digest_buffer);
+
+        const reference = hex_to_bytes(SHA_1_DIGEST_LENGTH, t.hash);
+        try testing.expectEqualSlices(u8, reference[0..], digest_buffer[0..]);
+    }
+}
+
+test "SHA-1 padding test" {
+    // TODO
 }

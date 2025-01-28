@@ -23,17 +23,24 @@ Most (**theoretical!**) users should directly use one of the cryptographic *prot
 - Advanced Encryption Standard (FIPS 197): AES-128, AES-192, AES-256
 - ChaCha20 (RFC 7539): ChaCha20 with 64-bit nonce and 64-bit counter, ChaCha20 with 96-bit nonce and 32-bit counter
 - Salsa20: Salsa20/20 with 256-key, Salsa20/20 with 128-bit key
+- Secure Hashing Algorithm: SHA-1
 
 ### Protocols
 
 ## Roadmap
+
+### Code quality
+
+- Use std library functions where possible
+- Refactor data manipulation (LE/BE int serialization, word rotations, etc.) into one place
+- Use @TypeInfo, @divExact, etc. to correctly abstract int sizes
 
 ### Primitives
 
 - DES, 3DES
 - Block cipher modes: CBC-PKCS7, CFB, OFB, CTR, GCM
 - Poly1305
-- SHA-256
+- SHA-2, SHA-3
 - BigIntegers & modular arithmetic
 - Cryptographically secure random BigInteger generation & primality testing
 - Elliptic Curve groups (over Fp fields)
