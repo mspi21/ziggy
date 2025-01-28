@@ -93,7 +93,7 @@ pub fn sha1_new() Sha1Ctx {
 
 pub fn sha1_update(ctx: *Sha1Ctx, message: []const u8) !void {
     // SHA-1 can digest a message of a maximum length of (2^64 - 1) bits due to the nature of its padding.
-    if (ctx.message_length + message.len > ((1 << 64) / 8))
+    if (ctx.message_length + message.len >= ((1 << 64) / 8))
         return MessageLengthLimitExceeded;
 
     const cnt_buffered_bytes = ctx.message_length % Sha1Ctx.BLOCK_SIZE;
@@ -485,4 +485,10 @@ test "SHA-1 padding test" {
         const ref = hex_to_bytes(SHA_1_DIGEST_LENGTH, reference[i]);
         try testing.expectEqualSlices(u8, ref[0..], digest_buffer[0..]);
     }
+}
+
+test "SHA-1 maximum length violation (simulated)" {
+    var ctx = sha1_new();
+    ctx.message_length = (1 << 61) - 1; // 2^64 - 8 bits
+    try testing.expectError(MessageLengthLimitExceeded, sha1_update(&ctx, "a"));
 }
