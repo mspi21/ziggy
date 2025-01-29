@@ -107,6 +107,8 @@ pub fn generic_final(
     }
 }
 
+// TODO: generic_destroy()
+
 // ----------------------------------- LOGICAL FUNCTIONS ----------------------------------- //
 
 pub fn ch(T: type, x: T, y: T, z: T) T {
