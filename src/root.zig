@@ -6,7 +6,10 @@ const CryptoError = error{
 };
 
 // rn just for build, later will be used by high-level API
-const aes = @import("primitive/blockcipher/aes.zig");
+pub const aes = @import("primitive/blockcipher/aes.zig");
+pub const chacha20 = @import("primitive/streamcipher/chacha20.zig");
+pub const salsa20 = @import("primitive/streamcipher/salsa20.zig");
+pub const sha = @import("primitive/digest/sha.zig");
 
 // Leave this for later, maybe make a separate ffi module
 
