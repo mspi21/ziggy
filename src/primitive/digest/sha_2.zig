@@ -398,8 +398,7 @@ pub fn sha512_224_update(ctx: *Sha512Ctx, message: []const u8) !void {
 pub fn sha512_224_final(ctx: *Sha512Ctx, out: *[SHA_512_224_DIGEST_LENGTH]u8) void {
     if (dbg and !ctx.t_is_224)
         @panic("Debug: Attempt to call sha512_224_final on a SHA-2 context not initialized in 224-bit mode.");
-    sha512_context_final(ctx, SHA_512_224_DIGEST_LENGTH, out);
-    std.debug.print("{x}\n", .{ctx.hash});
+    return sha512_context_final(ctx, SHA_512_224_DIGEST_LENGTH, out);
 }
 
 pub fn sha512_256_new() Sha512Ctx {
@@ -415,8 +414,7 @@ pub fn sha512_256_update(ctx: *Sha512Ctx, message: []const u8) !void {
 pub fn sha512_256_final(ctx: *Sha512Ctx, out: *[SHA_512_256_DIGEST_LENGTH]u8) void {
     if (dbg and !ctx.t_is_256)
         @panic("Debug: Attempt to call sha512_256_final on a SHA-2 context not initialized in 256-bit mode.");
-    sha512_context_final(ctx, SHA_512_256_DIGEST_LENGTH, out);
-    std.debug.print("{x}\n", .{ctx.hash});
+    return sha512_context_final(ctx, SHA_512_256_DIGEST_LENGTH, out);
 }
 
 // https://www.di-mgt.com.au/sha_testvectors.html

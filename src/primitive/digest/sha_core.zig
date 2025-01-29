@@ -101,9 +101,19 @@ pub fn generic_final(
 
     // Serialize the result.
     const word_size = @typeInfo(WordType).Int.bits / 8;
-    for (0..digest_length / word_size) |w| {
+    var serialized_bytes: usize = 0;
+    for (0..ctx.hash.len) |w| {
         const serialized_word = serialize_int_big_endian(WordType, ctx.hash[w]);
-        @memcpy(out[(w * word_size)..((w + 1) * word_size)], serialized_word[0..]);
+
+        // The digest_length does not have to be a multiple of word_size!
+        if (serialized_bytes > digest_length - word_size) {
+            @memcpy(out[w * word_size ..], serialized_word[0..(digest_length - serialized_bytes)]);
+            serialized_bytes += word_size;
+            break;
+        } else {
+            @memcpy(out[(w * word_size)..((w + 1) * word_size)], serialized_word[0..]);
+            serialized_bytes += word_size;
+        }
     }
 }
 
