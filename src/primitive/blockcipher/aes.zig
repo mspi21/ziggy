@@ -63,7 +63,12 @@ const AES_RCON = [_]u32{
 
 // ----------------------------------- ENCRYPTION/DECRYPTION -----------------------------------  //
 
-pub fn aes_encrypt_block(n_rounds: comptime_int, block_in: *const [AES_BLOCK_SIZE]u8, block_out: *[AES_BLOCK_SIZE]u8, expanded_key: *const [4 * (n_rounds + 1)]u32) void {
+pub fn aes_encrypt_block(
+    n_rounds: comptime_int,
+    block_in: *const [AES_BLOCK_SIZE]u8,
+    block_out: *[AES_BLOCK_SIZE]u8,
+    expanded_key: *const [4 * (n_rounds + 1)]u32,
+) void {
     // Copy input buffer into state (we're treating the buffer as a column-first matrix).
     var state: [AES_BLOCK_SIZE]u8 = undefined;
     @memcpy(state[0..], block_in);
@@ -120,63 +125,121 @@ pub fn aes_decrypt_block(n_rounds: comptime_int, block_in: *const [AES_BLOCK_SIZ
     @memset(state[0..], 0);
 }
 
-pub fn aes_128_encrypt_block(key: *const [Aes128Parameters.KEY_SIZE]u8, block_in: *const [AES_BLOCK_SIZE]u8, block_out: *[AES_BLOCK_SIZE]u8) void {
+pub fn aes_128_encrypt_block(
+    key: *const [Aes128Parameters.KEY_SIZE]u8,
+    block_in: *const [AES_BLOCK_SIZE]u8,
+    block_out: *[AES_BLOCK_SIZE]u8,
+) void {
     // Prepare the subkeys for AddRoundKey.
     var expanded_key = aes_128_expand_key(key);
     defer @memset(&expanded_key, 0);
 
     // Call the generic encryption procedure.
-    aes_encrypt_block(Aes128Parameters.N_ROUNDS, block_in, block_out, &expanded_key);
+    aes_encrypt_block(
+        Aes128Parameters.N_ROUNDS,
+        block_in,
+        block_out,
+        &expanded_key,
+    );
 }
 
-pub fn aes_128_decrypt_block(key: *const [Aes128Parameters.KEY_SIZE]u8, block_in: *const [AES_BLOCK_SIZE]u8, block_out: *[AES_BLOCK_SIZE]u8) void {
+pub fn aes_128_decrypt_block(
+    key: *const [Aes128Parameters.KEY_SIZE]u8,
+    block_in: *const [AES_BLOCK_SIZE]u8,
+    block_out: *[AES_BLOCK_SIZE]u8,
+) void {
     // Prepare the subkeys for AddRoundKey.
     var expanded_key = aes_128_expand_key(key);
     defer @memset(&expanded_key, 0);
 
     // Call the generic decryption procedure.
-    aes_decrypt_block(Aes128Parameters.N_ROUNDS, block_in, block_out, &expanded_key);
+    aes_decrypt_block(
+        Aes128Parameters.N_ROUNDS,
+        block_in,
+        block_out,
+        &expanded_key,
+    );
 }
 
-pub fn aes_192_encrypt_block(key: *const [Aes192Parameters.KEY_SIZE]u8, block_in: *const [AES_BLOCK_SIZE]u8, block_out: *[AES_BLOCK_SIZE]u8) void {
+pub fn aes_192_encrypt_block(
+    key: *const [Aes192Parameters.KEY_SIZE]u8,
+    block_in: *const [AES_BLOCK_SIZE]u8,
+    block_out: *[AES_BLOCK_SIZE]u8,
+) void {
     // Prepare the subkeys for AddRoundKey.
     var expanded_key = aes_192_expand_key(key);
     defer @memset(&expanded_key, 0);
 
     // Call the generic encryption procedure.
-    aes_encrypt_block(Aes192Parameters.N_ROUNDS, block_in, block_out, &expanded_key);
+    aes_encrypt_block(
+        Aes192Parameters.N_ROUNDS,
+        block_in,
+        block_out,
+        &expanded_key,
+    );
 }
 
-pub fn aes_192_decrypt_block(key: *const [Aes192Parameters.KEY_SIZE]u8, block_in: *const [AES_BLOCK_SIZE]u8, block_out: *[AES_BLOCK_SIZE]u8) void {
+pub fn aes_192_decrypt_block(
+    key: *const [Aes192Parameters.KEY_SIZE]u8,
+    block_in: *const [AES_BLOCK_SIZE]u8,
+    block_out: *[AES_BLOCK_SIZE]u8,
+) void {
     // Prepare the subkeys for AddRoundKey.
     var expanded_key = aes_192_expand_key(key);
     defer @memset(&expanded_key, 0);
 
     // Call the generic decryption procedure.
-    aes_decrypt_block(Aes192Parameters.N_ROUNDS, block_in, block_out, &expanded_key);
+    aes_decrypt_block(
+        Aes192Parameters.N_ROUNDS,
+        block_in,
+        block_out,
+        &expanded_key,
+    );
 }
 
-pub fn aes_256_encrypt_block(key: *const [Aes256Parameters.KEY_SIZE]u8, block_in: *const [AES_BLOCK_SIZE]u8, block_out: *[AES_BLOCK_SIZE]u8) void {
+pub fn aes_256_encrypt_block(
+    key: *const [Aes256Parameters.KEY_SIZE]u8,
+    block_in: *const [AES_BLOCK_SIZE]u8,
+    block_out: *[AES_BLOCK_SIZE]u8,
+) void {
     // Prepare the subkeys for AddRoundKey.
     var expanded_key = aes_256_expand_key(key);
     defer @memset(&expanded_key, 0);
 
     // Call the generic encryption procedure.
-    aes_encrypt_block(Aes256Parameters.N_ROUNDS, block_in, block_out, &expanded_key);
+    aes_encrypt_block(
+        Aes256Parameters.N_ROUNDS,
+        block_in,
+        block_out,
+        &expanded_key,
+    );
 }
 
-pub fn aes_256_decrypt_block(key: *const [Aes256Parameters.KEY_SIZE]u8, block_in: *const [AES_BLOCK_SIZE]u8, block_out: *[AES_BLOCK_SIZE]u8) void {
+pub fn aes_256_decrypt_block(
+    key: *const [Aes256Parameters.KEY_SIZE]u8,
+    block_in: *const [AES_BLOCK_SIZE]u8,
+    block_out: *[AES_BLOCK_SIZE]u8,
+) void {
     // Prepare the subkeys for AddRoundKey.
     var expanded_key = aes_256_expand_key(key);
     defer @memset(&expanded_key, 0);
 
     // Call the generic decryption procedure.
-    aes_decrypt_block(Aes256Parameters.N_ROUNDS, block_in, block_out, &expanded_key);
+    aes_decrypt_block(
+        Aes256Parameters.N_ROUNDS,
+        block_in,
+        block_out,
+        &expanded_key,
+    );
 }
 
 // ----------------------------------- KEY EXPANSION -----------------------------------  //
 
-pub fn aes_expand_key(n_rounds: comptime_int, n_key_words: comptime_int, key: *const [n_key_words * 4]u8) [4 * (n_rounds + 1)]u32 {
+pub fn aes_expand_key(
+    n_rounds: comptime_int,
+    n_key_words: comptime_int,
+    key: *const [n_key_words * 4]u8,
+) [4 * (n_rounds + 1)]u32 {
     var expanded_key: [4 * (n_rounds + 1)]u32 = undefined;
 
     var i: u32 = 0;
@@ -197,15 +260,27 @@ pub fn aes_expand_key(n_rounds: comptime_int, n_key_words: comptime_int, key: *c
 }
 
 pub fn aes_128_expand_key(key: *const [Aes128Parameters.KEY_SIZE]u8) [4 * (Aes128Parameters.N_ROUNDS + 1)]u32 {
-    return aes_expand_key(Aes128Parameters.N_ROUNDS, Aes128Parameters.KEY_SIZE / 4, key);
+    return aes_expand_key(
+        Aes128Parameters.N_ROUNDS,
+        Aes128Parameters.KEY_SIZE / 4,
+        key,
+    );
 }
 
 pub fn aes_192_expand_key(key: *const [Aes192Parameters.KEY_SIZE]u8) [4 * (Aes192Parameters.N_ROUNDS + 1)]u32 {
-    return aes_expand_key(Aes192Parameters.N_ROUNDS, Aes192Parameters.KEY_SIZE / 4, key);
+    return aes_expand_key(
+        Aes192Parameters.N_ROUNDS,
+        Aes192Parameters.KEY_SIZE / 4,
+        key,
+    );
 }
 
 pub fn aes_256_expand_key(key: *const [Aes256Parameters.KEY_SIZE]u8) [4 * (Aes256Parameters.N_ROUNDS + 1)]u32 {
-    return aes_expand_key(Aes256Parameters.N_ROUNDS, Aes256Parameters.KEY_SIZE / 4, key);
+    return aes_expand_key(
+        Aes256Parameters.N_ROUNDS,
+        Aes256Parameters.KEY_SIZE / 4,
+        key,
+    );
 }
 
 // ----------------------------------- AES OPERATIONS -----------------------------------  //
@@ -373,15 +448,12 @@ fn gfmult(factor: comptime_int, element: u8) u8 {
 
 fn word_to_bytes(word: u32) [4]u8 {
     var bytes: [4]u8 = undefined;
-    bytes[0] = @truncate(word >> 24);
-    bytes[1] = @truncate(word >> 16);
-    bytes[2] = @truncate(word >> 8);
-    bytes[3] = @truncate(word);
+    std.mem.writeInt(u32, &bytes, word, .big);
     return bytes;
 }
 
 fn bytes_to_word(bytes: *const [4]u8) u32 {
-    return (@as(u32, bytes[0]) << 24) | (@as(u32, bytes[1]) << 16) | (@as(u32, bytes[2]) << 8) | @as(u32, bytes[3]);
+    return std.mem.readInt(u32, bytes, .big);
 }
 
 // ----------------------------------- TEST VECTORS -----------------------------------  //
@@ -631,7 +703,7 @@ test "AES SubBytes" {
     };
 
     aes_sub_bytes(&state);
-    try testing.expect(std.mem.eql(u8, &state, &reference));
+    try testing.expectEqualSlices(u8, &reference, &state);
 }
 
 test "AES ShiftRows" {
@@ -645,7 +717,7 @@ test "AES ShiftRows" {
     };
 
     aes_shift_rows(&state);
-    try testing.expect(std.mem.eql(u8, &state, &reference));
+    try testing.expectEqualSlices(u8, &reference, &state);
 }
 
 test "AES MixColumns" {
@@ -659,7 +731,7 @@ test "AES MixColumns" {
     };
 
     aes_mix_columns(&state);
-    try testing.expect(std.mem.eql(u8, &state, &reference));
+    try testing.expectEqualSlices(u8, &reference, &state);
 }
 
 test "AES InvSubBytes" {
@@ -673,7 +745,7 @@ test "AES InvSubBytes" {
     };
 
     aes_inv_sub_bytes(&state);
-    try testing.expect(std.mem.eql(u8, &state, &reference));
+    try testing.expectEqualSlices(u8, &reference, &state);
 }
 
 test "AES InvShiftRows" {
@@ -687,7 +759,7 @@ test "AES InvShiftRows" {
     };
 
     aes_inv_shift_rows(&state);
-    try testing.expect(std.mem.eql(u8, &state, &reference));
+    try testing.expectEqualSlices(u8, &reference, &state);
 }
 
 test "AES InvMixColumns" {
@@ -701,5 +773,5 @@ test "AES InvMixColumns" {
     };
 
     aes_inv_mix_columns(&state);
-    try testing.expect(std.mem.eql(u8, &state, &reference));
+    try testing.expectEqualSlices(u8, &reference, &state);
 }

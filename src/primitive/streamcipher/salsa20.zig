@@ -201,40 +201,22 @@ pub fn salsa20_block_function(ctx: *Salsa20Ctx) void {
 // ----------------------------------- LITTLE ENDIAN HELPERS -----------------------------------  //
 
 fn salsa20_serialize(L: comptime_int, words: *const [L]u32, bytes: *[L * 4]u8) void {
-    if (comptime @import("builtin").target.cpu.arch.endian() == .little) {
-        @memcpy(bytes, @as(*const [L * 4]u8, @ptrCast(words)));
-    } else {
-        var tmp: [4]u8 = undefined;
-        for (0..L) |i| {
-            tmp = word_to_bytes_le(words[i]);
-            bytes[i * 4] = tmp[0];
-            bytes[i * 4 + 1] = tmp[1];
-            bytes[i * 4 + 2] = tmp[2];
-            bytes[i * 4 + 3] = tmp[3];
-        }
-    }
+    for (0..L) |i|
+        std.mem.writeInt(u32, @ptrCast(bytes[(i * 4)..(i * 4 + 4)]), words[i], .little);
 }
 
 fn salsa20_deserialize(L: comptime_int, bytes: *const [L * 4]u8, words: *[L]u32) void {
-    if (comptime @import("builtin").target.cpu.arch.endian() == .little) {
-        @memcpy(@as(*[L * 4]u8, @ptrCast(words)), bytes);
-    } else {
-        for (0..L) |i| {
-            words[i] = bytes_to_word_le(@ptrCast(bytes[(i * 4)..(i * 4 + 4)]));
-        }
-    }
+    for (0..L) |i|
+        words[i] = std.mem.readInt(u32, @ptrCast(bytes[(i * 4)..(i * 4 + 4)]), .little);
 }
 
 fn bytes_to_word_le(bytes: *const [4]u8) u32 {
-    return (@as(u32, bytes[3]) << 24) | (@as(u32, bytes[2]) << 16) | (@as(u32, bytes[1]) << 8) | @as(u32, bytes[0]);
+    return std.mem.readInt(u32, bytes, .little);
 }
 
 fn word_to_bytes_le(word: u32) [4]u8 {
     var bytes: [4]u8 = undefined;
-    bytes[3] = @truncate(word >> 24);
-    bytes[2] = @truncate(word >> 16);
-    bytes[1] = @truncate(word >> 8);
-    bytes[0] = @truncate(word);
+    std.mem.writeInt(u32, &bytes, word, .little);
     return bytes;
 }
 

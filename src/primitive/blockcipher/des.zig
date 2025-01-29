@@ -4,15 +4,12 @@ const testing = std.testing;
 // ----------------------------------- DES CONSTANTS -----------------------------------  //
 
 pub const DES_BLOCK_SIZE = 64 / 8;
-
 pub const DES_TRUE_KEY_SIZE = 56 / 8;
 pub const DES_ENCODED_KEY_SIZE = 64 / 8;
-
+pub const DES_N_ROUNDS = 16;
 pub const DES_SUBKEY_SIZE = 48 / 8;
 
-pub const DES_N_ROUNDS = 16;
-
-pub const DES_INITIAL_PERMUTATION = [_]u6{
+const DES_INITIAL_PERMUTATION = [_]u6{
     58, 50, 42, 35, 26, 18, 10, 2,
     60, 52, 44, 36, 28, 20, 12, 4,
     62, 54, 46, 38, 30, 22, 14, 6,
@@ -23,7 +20,7 @@ pub const DES_INITIAL_PERMUTATION = [_]u6{
     63, 55, 47, 39, 31, 23, 15, 7,
 };
 
-pub const DES_INV_INITIAL_PERMUTATION = [_]u6{
+const DES_INV_INITIAL_PERMUTATION = [_]u6{
     40, 8, 48, 16, 56, 24, 64, 32,
     39, 7, 47, 15, 55, 23, 63, 31,
     38, 6, 46, 14, 54, 22, 62, 30,
@@ -34,7 +31,7 @@ pub const DES_INV_INITIAL_PERMUTATION = [_]u6{
     33, 1, 41, 9,  49, 17, 57, 25,
 };
 
-pub const DES_BIT_SELECTION_TABLE_E = [_]u5{
+const DES_BIT_SELECTION_TABLE_E = [_]u5{
     32, 1,  2,  3,  4,  5,
     4,  5,  6,  7,  8,  9,
     8,  9,  10, 11, 12, 13,
@@ -45,14 +42,14 @@ pub const DES_BIT_SELECTION_TABLE_E = [_]u5{
     28, 29, 30, 31, 32, 1,
 };
 
-pub const DES_PERMUTATION_FUNCTION_P = [_]u5{
+const DES_PERMUTATION_FUNCTION_P = [_]u5{
     16, 7,  20, 21, 29, 12, 28, 17,
     1,  15, 23, 26, 5,  18, 31, 10,
     2,  8,  24, 14, 32, 27, 3,  9,
     19, 13, 30, 6,  22, 11, 4,  25,
 };
 
-pub const DES_KS_SHIFT_SCHEDULE = .{ 1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1 };
+const DES_KS_SHIFT_SCHEDULE = .{ 1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1 };
 
 // ----------------------------------- ENCRYPTION/DECRYPTION -----------------------------------  //
 
@@ -192,4 +189,4 @@ fn rotate_halves_left(cd: *[DES_TRUE_KEY_SIZE]u8, positions: comptime_int) void 
 
 // ----------------------------------- TEST VECTORS -----------------------------------  //
 
-//
+// TODO

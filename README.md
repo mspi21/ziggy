@@ -22,8 +22,8 @@ Most (**theoretical!**) users should directly use one of the cryptographic *prot
 
 - Advanced Encryption Standard (FIPS 197): AES-128, AES-192, AES-256
 - ChaCha20 (RFC 7539): ChaCha20 with 64-bit nonce and 64-bit counter, ChaCha20 with 96-bit nonce and 32-bit counter
-- Salsa20: Salsa20/20 with 256-key, Salsa20/20 with 128-bit key
-- Secure Hashing Algorithm: SHA-1, SHA-224, SHA-256, SHA-384, SHA-512, SHA-512/224, SHA-512/256
+- Salsa20 (Bernstein, not standardized): Salsa20/20 with 256-key, Salsa20/20 with 128-bit key
+- Secure Hash Standard (FIPS 180-4): SHA-1, SHA-224, SHA-256, SHA-384, SHA-512, SHA-512/224, SHA-512/256
 
 ### Protocols
 
@@ -40,7 +40,7 @@ Most (**theoretical!**) users should directly use one of the cryptographic *prot
 - DES, 3DES
 - Block cipher modes: CBC-PKCS7, CFB, OFB, CTR, GCM
 - Poly1305
-- SHA-3, HMAC
+- SHA-512/t, SHA-3, HMAC
 - BigIntegers & modular arithmetic
 - Cryptographically secure random BigInteger generation & primality testing
 - Elliptic Curve groups (over Fp fields)
