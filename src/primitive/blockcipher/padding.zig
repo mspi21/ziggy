@@ -18,7 +18,7 @@ pub fn pkcs7_pad(
     block: *[block_size]u8,
     plaintext_length: usize,
 ) void {
-    const plaintext_block_residue_length: u8 = plaintext_length % block_size;
+    const plaintext_block_residue_length: u8 = @intCast(plaintext_length % block_size);
     const padding_val: u8 = block_size - plaintext_block_residue_length;
     @memset(block[plaintext_block_residue_length..], padding_val);
 }
@@ -38,12 +38,4 @@ pub fn pkcs7_unpad(
             return CryptoError.InvalidPadding;
 
     return plaintext_residue_length;
-}
-
-test "PKCS #7 padding" {
-    // TODO
-}
-
-test "PKCS #7 unpadding" {
-    // TODO
 }

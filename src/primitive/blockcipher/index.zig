@@ -5,4 +5,5 @@ pub const padding = @import("padding.zig");
 
 pub const operation_mode = struct {
     pub const gcm = @import("mode_gcm.zig");
+    pub const cbc = @import("mode_cbc.zig");
 };

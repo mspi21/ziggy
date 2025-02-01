@@ -186,7 +186,3 @@ fn rotate_halves_left(cd: *[DES_TRUE_KEY_SIZE]u8, positions: comptime_int) void 
     // TODO
     _ = .{ cd, positions };
 }
-
-// ----------------------------------- TEST VECTORS -----------------------------------  //
-
-// TODO
