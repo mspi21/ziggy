@@ -1,7 +1,7 @@
 const std = @import("std");
 const testing = std.testing;
 
-const byte_operations = @import("TODO").utility.byte_operations;
+const byte_operations = @import("utility").byte_operations;
 const word_to_bytes = byte_operations.word_to_bytes_le;
 const bytes_to_word = byte_operations.bytes_to_word_le;
 

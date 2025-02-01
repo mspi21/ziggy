@@ -1,11 +1,11 @@
 const std = @import("std");
 const testing = std.testing;
 
-const byte_operations = @import("ziggy").utility.byte_operations;
+const byte_operations = @import("utility").byte_operations;
 const word_to_bytes = byte_operations.word_to_bytes_le;
 const bytes_to_word = byte_operations.bytes_to_word_le;
 
-const chacha20 = @import("ziggy").primitive.streamcipher.chacha20;
+const chacha20 = @import("primitive").streamcipher.chacha20;
 
 // ----------------------------------- TEST VECTORS -----------------------------------  //
 

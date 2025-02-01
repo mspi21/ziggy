@@ -1,7 +1,7 @@
 const std = @import("std");
 const testing = std.testing;
 
-const aes = @import("ziggy").primitive.blockcipher.aes;
+const aes = @import("primitive").blockcipher.aes;
 
 test "AES-128 key expansion (FIPS 197)" {
     const key = [aes.KEY_SIZE_128]u8{

@@ -1,8 +1,10 @@
 const std = @import("std");
-const testing = @import("std").testing;
+const testing = std.testing;
 
-const sha1 = @import("ziggy").primitive.digest.sha1;
-const sha2 = @import("ziggy").primitive.digest.sha2;
+const sha1 = @import("primitive").digest.sha1;
+const sha2 = @import("primitive").digest.sha2;
+
+const hex_to_bytes = @import("utility").byte_operations.hex_to_bytes;
 
 // ----------------------------------- SHA-1 ----------------------------------- //
 
@@ -284,27 +286,6 @@ test "SHA-384 basic test" {
 }
 
 // ----------------------------------- TEST HELPERS ----------------------------------- //
-
-fn hex_nibble_to_int(ascii_hex: u8) u4 {
-    const x = ascii_hex;
-    return @intCast(if (x >= '0' and x <= '9')
-        x - '0'
-    else if (x >= 'a' and x <= 'f')
-        10 + (x - 'a')
-    else if (x >= 'A' and x <= 'F')
-        10 + (x - 'A')
-    else
-        @panic("Argument is not a valid hex digit!"));
-}
-
-fn hex_to_bytes(L: comptime_int, hex_string: *const [2 * L]u8) [L]u8 {
-    var res: [L]u8 = undefined;
-    for (0..L) |i| {
-        res[i] = @as(u8, hex_nibble_to_int(hex_string[2 * i])) << 4;
-        res[i] |= hex_nibble_to_int(hex_string[2 * i + 1]);
-    }
-    return res;
-}
 
 fn run_hash_precomputed_tests(
     Ctx: type,

@@ -1,12 +1,15 @@
 const std = @import("std");
 const testing = std.testing;
 
+const blockcipher = @import("primitive").blockcipher;
+const hex_to_bytes = @import("utility").byte_operations.hex_to_bytes;
+
 // Use AES to test all of the operation modes.
-const aes = @import("ziggy").primitive.blockcipher.aes;
+const aes = blockcipher.aes;
 
 // ----------------------------------- CBC MODE ----------------------------------- //
 
-const cbc = @import("ziggy").primitive.blockcipher.operation_mode.cbc;
+const cbc = blockcipher.operation_mode.cbc;
 
 test "AES-128-CBC basic test" {
     const BS = aes.BLOCK_SIZE;
@@ -75,4 +78,63 @@ test "AES-128-CBC basic test" {
         try testing.expectEqual(plaintext.len % aes.BLOCK_SIZE, residue_length);
         try testing.expectEqualSlices(u8, plaintext[0..], pt_buffer[0..plaintext.len]);
     }
+}
+
+// ----------------------------------- GCM MODE ----------------------------------- //
+
+const gcm = @import("primitive").blockcipher.operation_mode.gcm;
+
+// https://csrc.nist.rip/groups/ST/toolkit/BCM/documents/proposedmodes/gcm/gcm-spec.pdf
+test "AES-GCM Test Case 1" {
+    const K = hex_to_bytes(128 / 8, "00000000000000000000000000000000");
+    const P = hex_to_bytes(0, "");
+    const IV = hex_to_bytes(96 / 8, "000000000000000000000000");
+
+    const H = hex_to_bytes(128 / 8, "66e94bd4ef8a2c3b884cfa59ca342b2e");
+    const Y0 = hex_to_bytes(128 / 8, "00000000000000000000000000000001");
+    // E_K_Y0      = 58e2fccefa7e3061367f1d57a4e7455a
+    // len_A_len_C = 00000000000000000000000000000000
+    // GHASH_H_A_C = 00000000000000000000000000000000
+    const C = hex_to_bytes(0, "");
+    const T = hex_to_bytes(128 / 8, "58e2fccefa7e3061367f1d57a4e7455a");
+
+    var ctx = try gcm.gcm128_new(aes.KEY_SIZE_128, aes.aes128_encrypt_block, &K, &IV);
+    try testing.expectEqualSlices(u8, &H, &ctx.h);
+    try testing.expectEqualSlices(u8, &Y0, &ctx.counter);
+
+    var ciphertext_buffer: @TypeOf(P) = undefined;
+    try gcm.gcm128_encrypt(aes.KEY_SIZE_128, aes.aes128_encrypt_block, &ctx, &P, &ciphertext_buffer);
+    try testing.expectEqualSlices(u8, &C, &ciphertext_buffer);
+
+    var tag_buffer: @TypeOf(T) = undefined;
+    try gcm.gcm128_encrypt_final(aes.KEY_SIZE_128, aes.aes128_encrypt_block, &ctx, &tag_buffer);
+    try testing.expectEqualSlices(u8, &T, &tag_buffer);
+}
+
+test "AES-GCM Test Case 2" {
+    const K = hex_to_bytes(128 / 8, "00000000000000000000000000000000");
+    const P = hex_to_bytes(128 / 8, "00000000000000000000000000000000");
+    const IV = hex_to_bytes(96 / 8, "000000000000000000000000");
+    const H = hex_to_bytes(128 / 8, "66e94bd4ef8a2c3b884cfa59ca342b2e");
+    const Y0 = hex_to_bytes(128 / 8, "00000000000000000000000000000001");
+    // E_K_Y0      = 58e2fccefa7e3061367f1d57a4e7455a
+    // Y1          = 00000000000000000000000000000002
+    // E_K_Y1      = 0388dace60b6a392f328c2b971b2fe78
+    // X1          = 5e2ec746917062882c85b0685353deb7
+    // len_A_len_C = 00000000000000000000000000000080
+    // GHASH_H_A_C = f38cbb1ad69223dcc3457ae5b6b0f885
+    const C = hex_to_bytes(128 / 8, "0388dace60b6a392f328c2b971b2fe78");
+    const T = hex_to_bytes(128 / 8, "ab6e47d42cec13bdf53a67b21257bddf");
+
+    var ctx = try gcm.gcm128_new(aes.KEY_SIZE_128, aes.aes128_encrypt_block, &K, &IV);
+    try testing.expectEqualSlices(u8, &H, &ctx.h);
+    try testing.expectEqualSlices(u8, &Y0, &ctx.counter);
+
+    var ciphertext_buffer: @TypeOf(P) = undefined;
+    try gcm.gcm128_encrypt(aes.KEY_SIZE_128, aes.aes128_encrypt_block, &ctx, &P, &ciphertext_buffer);
+    try testing.expectEqualSlices(u8, &C, &ciphertext_buffer);
+
+    var tag_buffer: @TypeOf(T) = undefined;
+    try gcm.gcm128_encrypt_final(aes.KEY_SIZE_128, aes.aes128_encrypt_block, &ctx, &tag_buffer);
+    try testing.expectEqualSlices(u8, &T, &tag_buffer);
 }
