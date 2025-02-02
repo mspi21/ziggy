@@ -1,6 +1,7 @@
 comptime {
     _ = .{
         @import("./primitive/blockcipher/aes.zig"),
+        @import("./primitive/blockcipher/des.zig"),
         @import("./primitive/blockcipher/operation_modes.zig"),
         @import("./primitive/digest/sha.zig"),
         @import("./primitive/streamcipher/chacha20.zig"),
